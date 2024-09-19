@@ -441,12 +441,22 @@ server_final_message(error, Error) ->
     iolist_to_binary(["e=", Error]).
 
 gen_salt() ->
-    <<X:128/big-unsigned-integer>> = crypto:strong_rand_bytes(16),
-    iolist_to_binary(io_lib:format("~32.16.0b", [X])).
+    case os:getenv("SCRAM_SALT") of
+        false ->
+            <<X:128/big-unsigned-integer>> = crypto:strong_rand_bytes(16),
+            iolist_to_binary(io_lib:format("~32.16.0b", [X]));
+        Value ->
+            iolist_to_binary(Value)
+    end.
 
 %% 0x21-2B, 0x2D-7E
 nonce() ->
-    list_to_binary([rand_uniform(33, 127) || _ <- lists:seq(1,15)]).
+    case os:getenv("SCRAM_NONCE") of
+        false ->
+            list_to_binary([rand_uniform(33, 127) || _ <- lists:seq(1, 15)]);
+        Value ->
+            iolist_to_binary(Value)
+    end.
 
 salted_password(Alg, Password, Salt, IterationCount) ->
     {ok, Bin} = pbkdf2:pbkdf2({hmac, Alg}, Password, Salt, IterationCount),
